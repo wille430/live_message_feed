@@ -6,13 +6,11 @@
 class WebServer : public WiFiEspServer
 {
 private:
-    void readRequest(WiFiEspClient client, String *method, String *request);
+    void readRequest(WiFiEspClient client, String *method, char *reqBody);
 
 public:
-    void listen(void (*callback)(WiFiEspClient client, String *method, String *reqBody));
-    WebServer(uint16_t port) : WiFiEspServer(port){
-
-                               };
+    void listen(void (*callback)(WiFiEspClient client, String *method, char *reqBody));
+    WebServer(uint16_t port) : WiFiEspServer(port){};
     void sendResponse(WiFiEspClient client, String *responseBody);
 };
 

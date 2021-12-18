@@ -1,7 +1,7 @@
 #include "WebServer.h"
 #include "Stream.h"
 
-void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, String *reqBody))
+void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, char *reqBody))
 {
 
     WiFiEspClient client = WiFiEspServer::available();
@@ -11,11 +11,11 @@ void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, St
         Serial.println("New client connected!");
 
         String method = String("");
-        String request = String("");
-        WebServer::readRequest(client, &method, &request);
+        char *reqBody;
+        WebServer::readRequest(client, &method, reqBody);
 
         Serial.println("Calling callback function...");
-        callback(client, &method, &request);
+        callback(client, &method, reqBody);
 
         delay(100);
 
@@ -26,11 +26,10 @@ void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, St
 
 void WebServer::sendResponse(WiFiEspClient client, String *responseBody)
 {
-
     Serial.print("Sending response with body of length ");
-    Serial.println((*responseBody).length());
+    Serial.println(sizeof(responseBody));
 
-    int contentLength = (*responseBody).length();
+    int contentLength = sizeof(responseBody);
 
     client.print(
         "HTTP/1.1 200 OK\r\n"
@@ -47,7 +46,7 @@ void WebServer::sendResponse(WiFiEspClient client, String *responseBody)
     client.println();
 }
 
-void WebServer::readRequest(WiFiEspClient client, String *method, String *reqBody)
+void WebServer::readRequest(WiFiEspClient client, String *method, char *reqBody)
 {
     Serial.println("Reading incoming data...");
 
@@ -68,15 +67,10 @@ void WebServer::readRequest(WiFiEspClient client, String *method, String *reqBod
             {
                 request += c;
             }
-
-            if (request.length() >= 4)
+            else
             {
-                Serial.println("Last 4 symbols in ASCII code: ");
-                Serial.print(request[request.length() - 4]);
-                Serial.print(request[request.length() - 3]);
-                Serial.print(request[request.length() - 2]);
-                Serial.print(request[request.length() - 1]);
-                Serial.println();
+                Serial.println("Encountered a NULL character. Exiting...");
+                break;
             }
 
             if (request.endsWith("\r\n\r\n"))
@@ -97,6 +91,10 @@ void WebServer::readRequest(WiFiEspClient client, String *method, String *reqBod
             {
                 if (c != '\n' && c != '\r')
                 {
+                    Serial.print("Found number in content-type: ");
+                    Serial.write(c);
+                    Serial.println();
+
                     contentLength += c;
                 }
                 else
@@ -107,10 +105,13 @@ void WebServer::readRequest(WiFiEspClient client, String *method, String *reqBod
 
             if (request.endsWith("Content-Type: "))
             {
+                Serial.print("Found content type!");
                 currentLineIsContentLength = true;
             }
         }
     }
+
+    reqBody = new char[contentLength.length()];
 
     if (*method == "POST")
     {

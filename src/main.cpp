@@ -8,6 +8,8 @@ SoftwareSerial EspSerial(6, 7);
 
 // Starta webserver på port 80
 WebServer webServer(80);
+// Start client
+WiFiEspClient client;
 
 // Nätverksnamn och lösenord
 char ssid[] = SECRET_SSID;
@@ -15,7 +17,7 @@ char password[] = SECRET_PASSWORD;
 
 int status = WL_IDLE_STATUS;
 
-String htmlBody = String("");
+String htmlBody;
 
 void printWifiStatus()
 {
@@ -30,35 +32,52 @@ void printWifiStatus()
   Serial.println(ip);
 }
 
-void onReqest(WiFiEspClient client, String *method, String *request)
+void onReqest(WiFiEspClient client, String *method, char *reqBody)
 {
+  webServer.sendResponse(client, &htmlBody);
+}
 
-  RingBuffer emptyBuffer(8);
-  emptyBuffer.init();
-
-  if ((*method).equals("GET"))
+void fetchHTMLBody()
+{
+  if (client.connect("raw.githubusercontent.com", 80))
   {
-    Serial.println("Sending html from buffer...");
-    Serial.println("---------- HTML body ----------");
-    Serial.println(htmlBody);
-    webServer.sendResponse(client, &htmlBody);
-  }
-  else if ((*method).equals("POST"))
-  {
-    Serial.println("Storing POST request body inside ring buffer...");
-    htmlBody = *request;
+    Serial.println("Connected to the server. Making request...");
 
-    Serial.println("Stored POST req body inside ring buffer.");
-    Serial.print("POST req length: ");
-    Serial.println((*request).length());
+    client.print(
+        "GET /wille430/live_message_feed/master/lib/sendFile/public/index.html HTTP/1.1\r\n"
+        "Host: raw.githubusercontent.com\r\n"
+        "user-agent: curl/7.80.0\r\n"
+        "accept: */*\r\n"
+        "\r\n");
 
-    webServer.sendResponse(client, &htmlBody);
-  }
-  else
-  {
-    Serial.print(*method);
-    Serial.println(" method is not supported. Sending default empty response...");
-    webServer.sendResponse(client, &htmlBody);
+    Serial.println("Reading request file...");
+
+    boolean isBody = false;
+    String header = "";
+    while (client.available())
+    {
+      char c = client.read();
+      Serial.write(c);
+
+      if (!isBody)
+      {
+        header += c;
+      }
+      else
+      {
+        Serial.print("Reading response body...");
+        htmlBody = client.readStringUntil('\0');
+      }
+
+      if (header.endsWith("\r\n\r\n"))
+      {
+        Serial.println("Found end of header");
+        isBody = true;
+      }
+    }
+
+    client.stop();
+    Serial.println("Text content was succesfully saved!");
   }
 }
 
@@ -94,6 +113,7 @@ void setup()
   printWifiStatus();
 
   webServer.begin();
+  fetchHTMLBody();
 }
 
 void loop()
