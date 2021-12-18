@@ -1,24 +1,21 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include "WiFiEsp.h"
-#include "../lib/WebServer.h"
+#include "WebServer.h"
+#include <secrets.h>
 
 SoftwareSerial EspSerial(6, 7);
 
 // Starta webserver på port 80
-WiFiEspServer server(80);
-WebServer webServer(server);
+WebServer webServer(80);
 
 // Nätverksnamn och lösenord
-char ssid[] = "NTIG Guest";
-char password[] = "TeknikPassion";
+char ssid[] = SECRET_SSID;
+char password[] = SECRET_PASSWORD;
 
 int status = WL_IDLE_STATUS;
 
-char serverIp[] = "ws://172.104.148.23";
-int port = 8080;
-
-WiFiEspClient client;
+String htmlBody = String("");
 
 void printWifiStatus()
 {
@@ -31,6 +28,38 @@ void printWifiStatus()
   IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
   Serial.println(ip);
+}
+
+void onReqest(WiFiEspClient client, String *method, String *request)
+{
+
+  RingBuffer emptyBuffer(8);
+  emptyBuffer.init();
+
+  if ((*method).equals("GET"))
+  {
+    Serial.println("Sending html from buffer...");
+    Serial.println("---------- HTML body ----------");
+    Serial.println(htmlBody);
+    webServer.sendResponse(client, &htmlBody);
+  }
+  else if ((*method).equals("POST"))
+  {
+    Serial.println("Storing POST request body inside ring buffer...");
+    htmlBody = *request;
+
+    Serial.println("Stored POST req body inside ring buffer.");
+    Serial.print("POST req length: ");
+    Serial.println((*request).length());
+
+    webServer.sendResponse(client, &htmlBody);
+  }
+  else
+  {
+    Serial.print(*method);
+    Serial.println(" method is not supported. Sending default empty response...");
+    webServer.sendResponse(client, &htmlBody);
+  }
 }
 
 void setup()
@@ -64,26 +93,10 @@ void setup()
   Serial.println("Successfully connected to wifi!");
   printWifiStatus();
 
-  // if (client.connect(serverIp, port))
-  // {
-  //   Serial.println("Connected to server");
-  //   client.println("");
-  // }
-
-  // Starta webservern
-  server.begin();
+  webServer.begin();
 }
 
 void loop()
 {
-  // if (!client.connected())
-  // {
-  //   Serial.print("Disconnecting from server...");
-  //   client.stop();
-
-  //   while (true)
-  //     ;
-  // }
-  webServer.awaitHtmlBody();
-  webServer.listen();
+  webServer.listen(*onReqest);
 }
