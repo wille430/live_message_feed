@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live twitter feed</title>
+</head>
+
+<body>
+    <header></header>
+    <main>
+
+        <form id="form">
+            <input type="text" autocomplete="off" name="" id="input">
+            <input type="submit" value="Submit">
+        </form>
+
+    </main>
+    <footer></footer>
+
+    <script>
+        // Anslut till serverns websocket
+        ws = new WebSocket('ws://172.104.148.23:8080')
+
+        // Spara DOM-elementen i variabler
+        var form = document.getElementById("form");
+        var input = document.getElementById("input");
+
+        // Lyssnar efter att formuläret skickas
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            // Skapa ett meddelande
+            const message = {
+                type: "message",
+                text: input.value
+            }
+
+            // Kolla så att texten i input inte är tom
+            if (input.value) {
+
+                // Skicka meddelandet till servern
+                ws.send(JSON.stringify(message));
+
+                // Töm input
+                input.value = "";
+            }
+        })
+    </script>
+
+</body>
+
+</html>
