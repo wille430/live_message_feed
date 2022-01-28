@@ -1,7 +1,7 @@
 #include "WebServer.h"
 #include "Stream.h"
 
-void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, char *reqBody))
+void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, String *reqBody))
 {
 
     WiFiEspClient client = WiFiEspServer::available();
@@ -11,11 +11,11 @@ void WebServer::listen(void (*callback)(WiFiEspClient client, String *method, ch
         Serial.println("New client connected!");
 
         String method = String("");
-        char *reqBody;
-        WebServer::readRequest(client, &method, reqBody);
+        String message = "";
+        WebServer::readRequest(client, &method, &message);
 
         Serial.println("Calling callback function...");
-        callback(client, &method, reqBody);
+        callback(client, &method, &message);
 
         Serial.println("Stopping client...");
         client.stop();
@@ -38,11 +38,9 @@ void WebServer::sendResponse(WiFiEspClient client, String *responseBody)
 
 }
 
-void WebServer::readRequest(WiFiEspClient client, String *method, char *reqBody)
+void WebServer::readRequest(WiFiEspClient client, String *method, String *message)
 {
     Serial.println("Reading incoming data...");
-
-    String message = "";
 
     while (client.connected())
     {
@@ -50,10 +48,10 @@ void WebServer::readRequest(WiFiEspClient client, String *method, char *reqBody)
         {
             String line = client.readStringUntil('/');
 
-            message = client.readStringUntil(' ');
+            *message = client.readStringUntil(' ');
 
             Serial.println("Message:");
-            Serial.println(message);
+            Serial.println(*message);
 
             break;
         }

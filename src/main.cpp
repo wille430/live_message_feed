@@ -4,6 +4,13 @@
 #include "WebServer.h"
 #include <secrets.h>
 
+// display library
+#include "U8glib.h"
+
+// skapa display
+U8GLIB_SSD1306_128X64 oled(U8G_I2C_OPT_NONE);
+
+// TX, RX pins för wifi modul
 SoftwareSerial EspSerial(6, 7);
 
 // Starta webserver på port 80
@@ -16,6 +23,14 @@ char password[] = SECRET_PASSWORD;
 int status = WL_IDLE_STATUS;
 
 String htmlBody = "";
+String messages[] = {
+  "",
+  "",
+  "",
+  "",
+  "",
+};
+int message_len = 0;
 
 void printWifiStatus()
 {
@@ -30,9 +45,15 @@ void printWifiStatus()
   Serial.println(ip);
 }
 
-void onReqest(WiFiEspClient client, String *method, char *reqBody)
+void onReqest(WiFiEspClient client, String *method, String *message)
 {
   webServer.sendResponse(client, &htmlBody);
+  messages[message_len] = (*message + '\n').c_str();
+  message_len += 1;
+  
+  if (message_len == 5) {
+    message_len = 0;
+  }
 }
 
 void setup()
@@ -68,10 +89,33 @@ void setup()
 
   webServer.begin();
   Serial.println("Listening for requests...");
+
+  // sätt skärmens font
+  oled.setFont(u8g_font_timB12);
+}
+
+void draw_screen()
+{
+  oled.setFont(u8g_font_helvB08);
+  int font_size = 12;
+
+  for (int i = 0; i < message_len; i++) {
+    // beräkna y-värde
+    int line_height = font_size * (i + 1);
+
+    // skriv meddelandet på skärmen
+    oled.drawStr(0, line_height, messages[i].c_str());
+  }
 }
 
 void loop()
 {
   delay(10);
   webServer.listen(*onReqest);
+
+  oled.firstPage();
+  do
+  {
+    draw_screen();
+  } while (oled.nextPage());
 }
