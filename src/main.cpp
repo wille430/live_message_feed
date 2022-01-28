@@ -8,8 +8,6 @@ SoftwareSerial EspSerial(6, 7);
 
 // Starta webserver på port 80
 WebServer webServer(80);
-// Start client
-WiFiEspClient client;
 
 // Nätverksnamn och lösenord
 char ssid[] = SECRET_SSID;
@@ -17,7 +15,7 @@ char password[] = SECRET_PASSWORD;
 
 int status = WL_IDLE_STATUS;
 
-String htmlBody;
+String htmlBody = "";
 
 void printWifiStatus()
 {
@@ -37,55 +35,11 @@ void onReqest(WiFiEspClient client, String *method, char *reqBody)
   webServer.sendResponse(client, &htmlBody);
 }
 
-void fetchHTMLBody()
-{
-  if (client.connect("raw.githubusercontent.com", 80))
-  {
-    Serial.println("Connected to the server. Making request...");
-
-    client.print(
-        "GET /wille430/live_message_feed/master/lib/sendFile/public/index.html HTTP/1.1\r\n"
-        "Host: raw.githubusercontent.com\r\n"
-        "user-agent: curl/7.80.0\r\n"
-        "accept: */*\r\n"
-        "\r\n");
-
-    Serial.println("Reading request file...");
-
-    boolean isBody = false;
-    String header = "";
-    while (client.available())
-    {
-      char c = client.read();
-      Serial.write(c);
-
-      if (!isBody)
-      {
-        header += c;
-      }
-      else
-      {
-        Serial.print("Reading response body...");
-        htmlBody = client.readStringUntil('\0');
-      }
-
-      if (header.endsWith("\r\n\r\n"))
-      {
-        Serial.println("Found end of header");
-        isBody = true;
-      }
-    }
-
-    client.stop();
-    Serial.println("Text content was succesfully saved!");
-  }
-}
-
 void setup()
 {
   // put your setup code here, to run once:
 
-  Serial.begin(115200);
+  Serial.begin(9600);
   EspSerial.begin(9600);
 
   // Initiera wifi modulen
@@ -113,10 +67,11 @@ void setup()
   printWifiStatus();
 
   webServer.begin();
-  fetchHTMLBody();
+  Serial.println("Listening for requests...");
 }
 
 void loop()
 {
+  delay(10);
   webServer.listen(*onReqest);
 }
