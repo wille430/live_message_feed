@@ -97,6 +97,8 @@ void draw_screen()
 void loop()
 {
   delay(10);
+
+  // lyssna efter requests
   webServer.listen(*onReqest);
 
   oled.firstPage();

@@ -12,6 +12,10 @@ public:
     int total_messages = 0;
     void push(String message)
     {
+
+        // format message
+        message.replace('-', ' ');
+
         // check if messages exeeds 5 (feed array length)
         if (total_messages >= 5)
         {
