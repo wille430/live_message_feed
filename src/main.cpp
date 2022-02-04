@@ -3,6 +3,7 @@
 #include "WiFiEsp.h"
 #include "WebServer.h"
 #include <secrets.h>
+#include "MessageFeed.h"
 
 // display library
 #include "U8glib.h"
@@ -23,14 +24,7 @@ char password[] = SECRET_PASSWORD;
 int status = WL_IDLE_STATUS;
 
 String htmlBody = "";
-String messages[] = {
-  "",
-  "",
-  "",
-  "",
-  "",
-};
-int message_len = 0;
+MessageFeed messageFeed;
 
 void printWifiStatus()
 {
@@ -48,12 +42,7 @@ void printWifiStatus()
 void onReqest(WiFiEspClient client, String *method, String *message)
 {
   webServer.sendResponse(client, &htmlBody);
-  messages[message_len] = (*message + '\n').c_str();
-  message_len += 1;
-  
-  if (message_len == 5) {
-    message_len = 0;
-  }
+  messageFeed.push((*message + '\n').c_str());
 }
 
 void setup()
@@ -89,9 +78,6 @@ void setup()
 
   webServer.begin();
   Serial.println("Listening for requests...");
-
-  // sätt skärmens font
-  oled.setFont(u8g_font_timB12);
 }
 
 void draw_screen()
@@ -99,12 +85,12 @@ void draw_screen()
   oled.setFont(u8g_font_helvB08);
   int font_size = 12;
 
-  for (int i = 0; i < message_len; i++) {
+  for (int i = 0; i < messageFeed.total_messages; i++) {
     // beräkna y-värde
     int line_height = font_size * (i + 1);
 
     // skriv meddelandet på skärmen
-    oled.drawStr(0, line_height, messages[i].c_str());
+    oled.drawStr(0, line_height, messageFeed.feed[i].c_str());
   }
 }
 

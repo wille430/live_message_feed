@@ -28,6 +28,7 @@ public:
         {
             // else add message to the next empty index
             feed[total_messages] = message;
+            total_messages += 1;
         }
     };
-}
+};
